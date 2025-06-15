@@ -10,12 +10,13 @@ genai.configure(api_key=google_api_key)
 
 model = genai.GenerativeModel("models/gemini-2.5-flash-preview-04-17-thinking",
                               system_instruction="""
-                              Bạn là một chuyên gia tư vấn nhạc cụ, đặc biệt là đàn guitar. 
-                              1. Nhiệm vụ của bạn là giúp khách hàng chọn cây đàn phù hợp nhất dựa trên trình độ, nhu cầu, và ngân sách của họ.
-                              2. Hãy đặt thêm câu hỏi ngắn gọn, bao hàm khi cần để hiểu rõ khách hàng hơn. Đừng hỏi quá dông dài, chỉ cần đúng trọng tâm 
-                              3. Đưa lý do cụ thể tại sao nên chọn cây đàn đó, và nếu cần thì giải thích ngắn gọn xúc tích , không sử dụng từ ngữ chuyên môn quá phức tạp
-                              4. Hãy đưa ra các lựa chọn phù hợp kèm theo mô tả chi tiết và so sánh giữa các loại đàn (classic, acoustic, electric,...)
-                              5. Đừng hỏi liền 1 mạch tất cả câu hỏi, hãy hỏi theo thứ tự từng câu: trình độ chơi rồi đến lối chơi, thể loại muốn chơi rồi cuối cùng là giá tiền
+                              Bạn là một chuyên gia tư vấn nhạc cụ, đặc biệt là đàn guitar.
+                                1. Nhiệm vụ của bạn là giúp khách hàng chọn cây đàn phù hợp nhất dựa trên trình độ, nhu cầu, và ngân sách của họ.
+                                2. Hãy đặt thêm câu hỏi ngắn gọn, bao hàm khi cần để hiểu rõ khách hàng hơn. Đừng hỏi quá dông dài, chỉ cần đúng trọng tâm.
+                                3. Đưa lý do cụ thể tại sao nên chọn cây đàn đó, và nếu cần thì giải thích ngắn gọn, xúc tích, không sử dụng từ ngữ chuyên môn quá phức tạp.
+                                4. Hãy đưa ra các lựa chọn phù hợp kèm theo mô tả chi tiết và so sánh giữa các loại đàn (classic, acoustic, electric,...).
+                                5. Đừng hỏi liền một mạch tất cả câu hỏi, hãy hỏi theo thứ tự từng câu: trình độ chơi, lối chơi, thể loại muốn chơi, cuối cùng là giá tiền.
+                                6. Sau khi khách hàng trả lời một câu hỏi, hãy lưu lại thông tin đó và KHÔNG hỏi lại cùng một câu hỏi. Chỉ chuyển sang câu hỏi tiếp theo trong thứ tự nếu chưa có thông tin. Nếu đã có đủ thông tin, hãy tư vấn đàn phù hợp.
 """)
 
 chat = model.start_chat()
@@ -26,7 +27,7 @@ if 'page' not in st.session_state:
 
 # Hàm quay lại trang chủ
 def go_home():
-    st.session_state.page = 'home'
+    st.session_state.page = "home"
 
 # Hàm chuyển trang
 def set_page(page_name):
@@ -34,8 +35,10 @@ def set_page(page_name):
 
 # Trang chủ
 def home():
-    st.title("Tư vấn & Dự đoán Đàn Guitar")
-    st.write("Chọn một chức năng bên dưới để bắt đầu:")
+    st.title("Guitarbot")
+    st.header("Nơi tư vấn và dự đoán thể loại đàn guitar")
+    st.title("")
+    st.subheader("Chọn một chức năng bên dưới để bắt đầu:")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -73,10 +76,10 @@ def chatbot():
         with st.chat_message("assistant"):
             st.markdown(bot_reply)
             # Nút back nằm riêng ở đầu, không bị ảnh hưởng bởi chat
-        with st.container():
-            if st.button("⬅ Quay lại trang chủ", key="back_btn_chatbot"):
-                go_home()
-                st.stop()  # Dừng render tiếp nếu quay lại
+    with st.container():
+        if st.button("⬅ Quay lại trang chủ", key="back_btn_chatbot"):
+            go_home()
+            st.stop()  # Dừng render tiếp nếu quay lại
 
 def predict():
     st.title("Dự đoán thể loại đàn theo hình ảnh")
@@ -86,32 +89,34 @@ def predict():
         if st.button("⬅ Quay lại trang chủ", key="back_btn_predict"):
             go_home()
             st.stop()  # Dừng render tiếp nếu quay lại
+
+
     import tensorflow as tf
     from tensorflow.keras.preprocessing.image import ImageDataGenerator
     from tensorflow.keras import layers, models
-    
-    # Đường dẫn tới thư mục chứa dữ liệu
+
+    # Đường dẫn dữ liệu
     train_dir = 'Chatbot/train'
     val_dir = 'Chatbot/validation'
-    
-    # Tiền xử lý và tăng cường dữ liệu
+
+    # Tiền xử lý dữ liệu
     train_datagen = ImageDataGenerator(rescale=1./255, rotation_range=20, zoom_range=0.2, horizontal_flip=True)
     val_datagen = ImageDataGenerator(rescale=1./255)
-    
+
     train_generator = train_datagen.flow_from_directory(
         train_dir,
         target_size=(128, 128),
         batch_size=32,
-        class_mode='binary'
+        class_mode='categorical'  # 2 lớp: acoustic, electric
     )
-    
+
     val_generator = val_datagen.flow_from_directory(
         val_dir,
         target_size=(128, 128),
         batch_size=32,
-        class_mode='binary'
+        class_mode='categorical'
     )
-    
+
     # Xây dựng mô hình CNN đơn giản
     model = models.Sequential([
         layers.Conv2D(32, (3,3), activation='relu', input_shape=(128,128,3)),
@@ -120,24 +125,24 @@ def predict():
         layers.MaxPooling2D(2,2),
         layers.Flatten(),
         layers.Dense(64, activation='relu'),
-        layers.Dense(1, activation='sigmoid')
+        layers.Dense(2, activation='softmax')  # 2 lớp đầu ra
     ])
-    
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    
+
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
     # Huấn luyện mô hình
     model.fit(
         train_generator,
         epochs=10,
         validation_data=val_generator
     )
-    
+
     # Lưu mô hình
-    model.save('guitar_classifier.h5')
+    model.save('guitar_type_classifier.h5')
 # Router
 if st.session_state.page == 'home':
     home()
 elif st.session_state.page == 'chatbot':
     chatbot()
-# elif st.session_state.page == 'predict':
-#     predict()
+elif st.session_state.page == 'predict':
+    predict()
